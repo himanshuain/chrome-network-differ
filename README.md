@@ -31,12 +31,17 @@
 
 The popup provides quick access to inject, open the differ, toggle floating buttons, and clear captured data.
 
+<img width="298" height="424" alt="Screenshot 2026-03-01 at 7 31 31 PM" src="https://github.com/user-attachments/assets/870bd1e3-3276-4e79-88a5-cd9d0942f7fb" />
+
+
 </details>
 
 <details>
 <summary>Diff View</summary>
 
 Side-by-side comparison with color-coded additions (green), removals (red), and changes (yellow).
+<img width="1728" height="1078" alt="Screenshot 2026-03-01 at 7 29 50 PM" src="https://github.com/user-attachments/assets/a75c8b43-86f8-4418-a086-307e6b75d625" />
+
 
 </details>
 
@@ -44,6 +49,8 @@ Side-by-side comparison with color-coded additions (green), removals (red), and 
 <summary>Inspect View</summary>
 
 Click any request to see its full JSON payload with syntax highlighting.
+<img width="1728" height="1078" alt="Screenshot 2026-03-01 at 7 31 11 PM" src="https://github.com/user-attachments/assets/0d37851a-7f7f-4e21-ae92-46ffbc6f1e20" />
+
 
 </details>
 
