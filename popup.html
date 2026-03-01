@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 300px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1e1e2e;
+    color: #cdd6f4;
+    padding: 16px;
+  }
+  h1 { font-size: 15px; font-weight: 600; color: #89b4fa; margin-bottom: 12px; }
+  .status { font-size: 12px; color: #a6adc8; margin-bottom: 14px; line-height: 1.5; }
+  .status .on { color: #a6e3a1; font-weight: 600; }
+  .status .off { color: #f38ba8; font-weight: 600; }
+  .count { font-size: 12px; color: #6c7086; margin-bottom: 14px; }
+  .count strong { color: #f9e2af; }
+  button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 8px;
+  }
+  .btn-primary { background: #89b4fa; color: #1e1e2e; }
+  .btn-primary:hover { background: #b4d0fb; }
+  .btn-inject { background: #a6e3a1; color: #1e1e2e; }
+  .btn-inject:hover { background: #c4f0c0; }
+  .btn-toggle { background: #313244; color: #cdd6f4; border: 1px solid #45475a; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn-toggle:hover { background: #45475a; }
+  .btn-danger { background: #313244; color: #f38ba8; border: 1px solid #45475a; }
+  .btn-danger:hover { background: #3d2030; }
+  .sep { height: 1px; background: #313244; margin: 12px 0; }
+  .hint { font-size: 11px; color: #6c7086; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <h1>API Differ</h1>
+  <div class="status" id="status">Status: <span class="off">Not injected</span></div>
+  <div class="count" id="count">Captured: <strong>0</strong> requests</div>
+
+  <button class="btn-inject" id="injectBtn">Inject into Current Tab</button>
+  <button class="btn-primary" id="openBtn">Open Differ</button>
+  <button class="btn-toggle" id="toggleFloatBtn">
+    <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    <span id="toggleLabel">Show Floating Buttons</span>
+  </button>
+  <button class="btn-danger" id="clearBtn">Clear All</button>
+
+  <div class="sep"></div>
+  <div class="hint">
+    1. Click <b>Inject</b> on each tab you want to capture from<br>
+    2. Use the page normally &mdash; API calls get captured<br>
+    3. Click <b>Open Differ</b> to compare any two requests
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

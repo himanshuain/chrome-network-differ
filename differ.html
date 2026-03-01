@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>API Differ</title>
+<style>
+  :root {
+    --bg: #1e1e2e; --surface: #181825; --surface2: #313244;
+    --border: #45475a; --text: #cdd6f4; --subtext: #a6adc8; --dim: #6c7086;
+    --blue: #89b4fa; --green: #a6e3a1; --red: #f38ba8; --yellow: #f9e2af;
+    --peach: #fab387; --mauve: #cba6f7; --teal: #94e2d5;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; display: flex; height: 100vh; overflow: hidden; }
+
+  /* Resizable left panel */
+  .left-panel { width: 400px; min-width: 200px; max-width: 70vw; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface); position: relative; }
+  .resize-handle { position: absolute; top: 0; right: -3px; width: 6px; height: 100%; cursor: col-resize; z-index: 10; }
+  .resize-handle:hover, .resize-handle.active { background: var(--blue); opacity: 0.4; }
+
+  .toolbar { padding: 10px 14px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid var(--border); background: var(--bg); flex-wrap: wrap; }
+  .toolbar input { flex: 1; min-width: 100px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; outline: none; }
+  .toolbar input:focus { border-color: var(--blue); }
+  .toolbar button { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; cursor: pointer; font-weight: 600; background: var(--surface2); color: var(--text); }
+  .toolbar button:hover { background: var(--border); }
+  .toolbar .btn-refresh { color: var(--green); }
+  .toolbar .btn-clear { color: var(--red); }
+
+  .request-list { flex: 1; overflow-y: auto; }
+  .origin-group { border-bottom: 1px solid var(--border); }
+  .origin-header { display: flex; align-items: center; gap: 6px; padding: 7px 12px; background: var(--bg); cursor: pointer; user-select: none; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 2; }
+  .origin-header:hover { background: var(--surface2); }
+  .origin-chevron { font-size: 10px; color: var(--dim); transition: transform 0.15s; width: 12px; flex-shrink: 0; }
+  .origin-chevron.collapsed { transform: rotate(-90deg); }
+  .tab-marker { min-width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: var(--bg); flex-shrink: 0; padding: 0 3px; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+  .origin-label { font-size: 11px; font-weight: 600; color: var(--text); flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+  .origin-env { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+  .origin-tab-name { color: var(--dim); font-weight: 400; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .origin-edit { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--dim); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
+  .origin-header:hover .origin-edit { opacity: 1; }
+  .origin-edit:hover { background: var(--surface2); color: var(--text); }
+  .origin-count { font-size: 10px; color: var(--dim); background: var(--surface2); padding: 1px 6px; border-radius: 10px; flex-shrink: 0; }
+  .origin-items.collapsed { display: none; }
+
+  .request-item { padding: 7px 12px 7px 30px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; gap: 8px; align-items: flex-start; transition: background 0.1s; }
+  .request-item:hover { background: rgba(255,255,255,0.05) !important; }
+  .request-item.selected { background: rgba(148,226,213,0.08); border-left: 3px solid var(--teal); }
+  .request-item.pinned-a { border-left: 3px solid var(--blue); background: rgba(137,180,250,0.07); }
+  .request-item.pinned-b { border-left: 3px solid var(--peach); background: rgba(250,179,135,0.07); }
+  .method { font-weight: 700; font-size: 10px; padding: 2px 5px; border-radius: 4px; white-space: nowrap; }
+  .method.GET { background: rgba(166,227,161,0.15); color: var(--green); }
+  .method.POST { background: rgba(137,180,250,0.15); color: var(--blue); }
+  .method.PUT { background: rgba(249,226,175,0.15); color: var(--yellow); }
+  .method.PATCH { background: rgba(203,166,247,0.15); color: var(--mauve); }
+  .method.DELETE { background: rgba(243,139,168,0.15); color: var(--red); }
+  .req-info { flex: 1; min-width: 0; }
+  .req-url { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+  .req-meta { display: flex; gap: 8px; margin-top: 2px; font-size: 10px; color: var(--dim); }
+  .req-meta .status-ok { color: var(--green); }
+  .req-meta .status-err { color: var(--red); }
+  .pin-btns { display: flex; gap: 3px; align-items: center; flex-shrink: 0; }
+  .pin-btn { width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; cursor: pointer; background: var(--surface); }
+  .pin-btn.a { color: var(--blue); }
+  .pin-btn.b { color: var(--peach); }
+  .pin-btn.active-a { background: var(--blue); color: var(--bg); border-color: var(--blue); }
+  .pin-btn.active-b { background: var(--peach); color: var(--bg); border-color: var(--peach); }
+
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--dim); gap: 12px; padding: 40px; text-align: center; }
+  .empty-state .icon { font-size: 48px; opacity: 0.3; }
+  .empty-state p { line-height: 1.6; }
+
+  .right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .diff-toolbar { padding: 8px 14px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; background: var(--bg); flex-wrap: wrap; }
+  .diff-toolbar .tab { padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid transparent; color: var(--subtext); }
+  .diff-toolbar .tab.active { background: var(--surface2); color: var(--text); border-color: var(--border); }
+  .diff-toolbar .tab:hover:not(.active) { color: var(--text); }
+  .diff-toolbar .separator { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+  .diff-toolbar .toggle-btn { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--subtext); white-space: nowrap; }
+  .diff-toolbar .toggle-btn:hover { color: var(--text); background: var(--border); }
+  .diff-toolbar .toggle-btn.active { background: var(--yellow); color: var(--bg); border-color: var(--yellow); }
+  .diff-toolbar .density-group { display: flex; gap: 0; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+  .diff-toolbar .density-btn { padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; background: var(--surface2); color: var(--subtext); }
+  .diff-toolbar .density-btn:hover { color: var(--text); }
+  .diff-toolbar .density-btn.active { background: var(--blue); color: var(--bg); }
+  .diff-toolbar .density-btn + .density-btn { border-left: 1px solid var(--border); }
+
+  .mode-indicator { padding: 6px 14px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 11px; display: none; align-items: center; gap: 10px; overflow: hidden; }
+  .mode-tag { padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 10px; text-transform: uppercase; }
+  .inspect-tag { background: rgba(148,226,213,0.2); color: var(--teal); }
+  .mode-url { color: var(--subtext); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+  .mode-status { font-weight: 600; }
+  .mode-dur { color: var(--dim); }
+
+  .diff-labels { display: flex; gap: 0; padding: 0 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .diff-label { flex: 1; padding: 6px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .diff-label.a { color: var(--blue); border-right: 1px solid var(--border); }
+  .diff-label.b { color: var(--peach); }
+
+  .diff-content { flex: 1; display: flex; overflow: hidden; }
+  .diff-pane { flex: 1; overflow: auto; padding: 14px; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+  .diff-pane + .diff-pane { border-left: 1px solid var(--border); }
+
+  body.density-compact .diff-pane { line-height: 1.2; font-size: 11px; padding: 8px; }
+  body.density-compact .diff-line { padding: 0 6px; margin: 0; }
+  body.density-normal .diff-pane { line-height: 1.5; }
+  body.density-normal .diff-line { padding: 1px 8px; margin: 1px 0; }
+  body.density-relaxed .diff-pane { line-height: 1.8; font-size: 13px; }
+  body.density-relaxed .diff-line { padding: 2px 8px; margin: 2px 0; }
+
+  .diff-line { border-radius: 3px; }
+  .diff-line.added { background: rgba(166,227,161,0.12); color: var(--green); }
+  .diff-line.removed { background: rgba(243,139,168,0.12); color: var(--red); }
+  .diff-line.changed { background: rgba(249,226,175,0.1); color: var(--yellow); }
+  .diff-line.same { color: var(--dim); }
+  .diff-line.context-sep { color: var(--dim); opacity: 0.5; text-align: center; font-style: italic; font-size: 10px; }
+
+  .json-key { color: var(--blue); }
+  .json-str { color: var(--green); }
+  .json-num { color: var(--peach); }
+  .json-bool { color: var(--mauve); }
+  .json-null { color: var(--dim); font-style: italic; }
+
+  .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--dim); font-size: 13px; text-align: center; padding: 40px; line-height: 2; flex: 1; gap: 16px; }
+  .placeholder .ph-icon { font-size: 40px; opacity: 0.2; }
+  .placeholder .ph-a { color: var(--blue); font-weight: 700; }
+  .placeholder .ph-b { color: var(--peach); font-weight: 700; }
+
+  .stats { padding: 6px 14px; background: var(--surface); border-top: 1px solid var(--border); font-size: 11px; color: var(--dim); display: flex; gap: 16px; }
+  .stats .added { color: var(--green); }
+  .stats .removed { color: var(--red); }
+  .stats .changed { color: var(--yellow); }
+  .status-ok { color: var(--green); }
+  .status-err { color: var(--red); }
+</style>
+</head>
+<body class="density-compact">
+
+<div class="left-panel" id="leftPanel">
+  <div class="toolbar">
+    <input type="text" id="filterInput" placeholder="Filter by URL...">
+    <button class="btn-refresh" id="refreshBtn" title="Refresh">&#x21bb;</button>
+    <button class="btn-clear" id="clearBtn" title="Clear all">&#x2715;</button>
+  </div>
+  <div class="request-list" id="requestList">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">&#x1F50D;</div>
+      <p>No requests captured yet.<br>Click <b>Inject Differ</b> on your tab, then use the page.</p>
+    </div>
+  </div>
+  <div class="resize-handle" id="resizeHandle"></div>
+</div>
+
+<div class="right-panel">
+  <div class="diff-toolbar" id="diffToolbar" style="display:none;">
+    <div class="tab active" data-tab="response">Response</div>
+    <div class="tab" data-tab="request">Request</div>
+    <div class="tab" data-tab="headers">Headers</div>
+    <div class="separator"></div>
+    <button class="toggle-btn" id="diffOnlyBtn" title="Show only changed lines">Diff Only</button>
+    <div class="separator"></div>
+    <div class="density-group">
+      <button class="density-btn active" data-density="compact" title="Compact">S</button>
+      <button class="density-btn" data-density="normal" title="Normal">M</button>
+      <button class="density-btn" data-density="relaxed" title="Relaxed">L</button>
+    </div>
+  </div>
+  <div class="mode-indicator" id="modeIndicator"></div>
+  <div class="diff-labels" id="diffLabels" style="display:none;">
+    <div class="diff-label a" id="labelA">A</div>
+    <div class="diff-label b" id="labelB">B</div>
+  </div>
+  <div class="diff-content" id="diffContent">
+    <div class="placeholder">
+      <div class="ph-icon">&#x2194;</div>
+      <div>Click a request to inspect it</div>
+      <div>Pin <span class="ph-a">A</span> and <span class="ph-b">B</span> to compare side by side</div>
+    </div>
+  </div>
+  <div class="stats" id="statsBar" style="display:none;"></div>
+</div>
+
+<script src="differ.js"></script>
+</body>
+</html>
